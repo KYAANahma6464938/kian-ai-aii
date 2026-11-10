@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── AI Chat ────────────────────────────────────────────────
+
+model Conversation {
+  id        String    @id @default(cuid())
+  title     String    @default("New conversation")
+  language  String    @default("fa") // fa | en
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String // user | assistant | system
+  content        String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+// ─── Projects (websites / apps built by KIAN) ───────────────
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String        @default("")
+  type        String        @default("landing") // landing | dashboard | webapp | react | custom
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  files       ProjectFile[]
+  tasks       AgentTask[]
+}
+
+model ProjectFile {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  path      String // e.g. index.html, css/style.css, js/app.js, src/App.jsx
+  content   String
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, path])
+  @@index([projectId])
+}
+
+// ─── Automation agent ───────────────────────────────────────
+
+model AgentTask {
+  id          String   @id @default(cuid())
+  title       String
+  instruction String
+  status      String   @default("planned") // planned | running | completed | failed
+  plan        String   @default("[]") // JSON: [{ id, title, description, type, status, result? }]
+  logs        String   @default("[]") // JSON: [{ at, level, message }]
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
